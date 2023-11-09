@@ -1,0 +1,54 @@
+version: '3.4'
+
+networks:
+  netapi-dev:
+    driver: bridge
+
+services:
+  client:
+    stdin_open: true
+    image: client:latest
+    build:
+      context: ./front-react
+      dockerfile: Dockerfile
+    volumes:
+      - '/node_modules'
+    ports:
+      - "3000:3000"
+    environment:
+      REACT_APP_BACK_END_POINT: "http://localhost:3001/blog"
+    networks:
+      - netapi-dev
+
+  netapi:
+    stdin_open: true
+    image: netapi:latest
+    depends_on:
+      - "postgres_image"
+    build:
+      context: ./netapi
+      dockerfile: Dockerfile
+    ports:
+      - "3001:80"
+    environment:
+      DB_CONNECTION_STRING: "host=host.docker.internal;port=5433;database=blogdb;username=alexander;password=1234"
+    networks:
+      - netapi-dev
+
+  postgres_image:
+    stdin_open: true
+    image: postgres:latest
+    ports:
+      - "5433:5432"
+    restart: always
+    volumes:
+      - db_volume:/var/lib/postgresql/data
+      - ./netapi/dbscripts/seed.sql:/docker-entrypoint-initdb.d/seed.sql
+    environment:
+      POSTGRES_USER: ""
+      POSTGRES_PASSWORD: ""
+      POSTGRES_DB: "blogdb"
+    networks:
+      - netapi-dev
+volumes:
+  db_volume:
